@@ -22,7 +22,6 @@
     setup: 
 
   tasks:
-#yum_recosity nao rolou
   - copy: 
       src: /vagrant/arquivos/virt7-docker-common-release.repo 
       dest: /etc/yum.repos.d/virt7-docker-common-release.repo 
