@@ -1,0 +1,52 @@
+- hosts: all 
+  become_user: root
+  become: true
+  gather_facts: true
+
+
+  tasks:
+
+  - name: Instalado Pacotes - node 
+    action: "{{ ansible_pkg_mgr }} name={{ item }} state=present update_cache=yes"
+    with_items:
+     - flannel 
+    tags: instalar
+
+
+  - name: Copia arquivos    
+    copy:
+      src="{{ item.src }}" 
+      dest="{{ item.dest }}"
+    with_items:
+        - { src: 'arquivos/kubernetes_config.slave', dest: '/etc/kubernetes/config' }
+        - { src: 'arquivos/kubelet.slave', dest: '/etc/kubernetes/kubelet' }
+        - { src: 'arquivos/flanneld.slave', dest: '/etc/sysconfig/flanneld' }
+        - { src: 'arquivos/flannel-config.json', dest: '/etc/flannel-config.json' }
+    notify:
+      - restart_servicos 
+
+  - name: Iniciando servicos 
+    service: name={{ item }} state=started
+    with_items:
+      - kube-proxy
+      - kubelet
+      - docker  
+      - flanneld 
+
+  - name: Habilitando servicos para o Boot 
+    service: name={{ item }} enabled=yes
+    with_items:
+      - kube-proxy
+      - kubelet
+      - docker  
+      - flanneld
+
+  handlers:
+    - name: restart_servicos
+      service: name={{ item }} state=restarted
+      with_items:
+       - kube-proxy 
+       - kubelet
+       - docker                        
+       - flanneld  
+

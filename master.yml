@@ -1,0 +1,57 @@
+- hosts: all 
+  become_user: root
+  become: true
+  gather_facts: true
+
+
+  tasks:
+
+  - name: Instalado Pacotes - Master 
+    action: "{{ ansible_pkg_mgr }} name={{ item }} state=present update_cache=yes"
+    with_items:
+     - etcd 
+    tags: instalar
+
+
+  - name: Copia arquivos    
+    copy:
+      src="{{ item.src }}" 
+      dest="{{ item.dest }}"
+    with_items:
+        - { src: 'arquivos/kubernetes_config.master', dest: '/etc/kubernetes/config' }
+        - { src: 'arquivos/apiserver.master', dest: '/etc/kubernetes/apiserver' }
+        - { src: 'arquivos/etcd.conf.master', dest: '/etc/etcd/etcd.conf' }
+        - { src: 'arquivos/flannel-config.json', dest: '/etc/flannel-config.json' }
+    notify:
+      - restart_servicos 
+
+  - name: Iniciando servicos 
+    service: name={{ item }} state=restarted 
+    with_items:
+      - etcd
+      - kube-apiserver 
+      - kube-controller-manager 
+      - kube-scheduler
+
+  - name: Habilitando servicos  para boot 
+    service: name={{ item }} enabled=yes
+    with_items:
+      - etcd
+      - kube-apiserver 
+      - kube-controller-manager 
+      - kube-scheduler
+
+
+
+  - name: Rede Flannel
+    shell: etcdctl set /atomic.io/network/config < /etc/flannel-config.json
+
+  handlers:
+    - name: restart_servicos
+      service: name={{ item }} state=restarted
+      with_items:
+       - etcd
+       - kube-apiserver 
+       - kube-controller-manager 
+       - kube-scheduler
+
